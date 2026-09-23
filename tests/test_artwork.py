@@ -99,6 +99,33 @@ class CoverTests(unittest.TestCase):
         with Image.open(BytesIO(tags.getall("APIC")[0].data)) as cover:
             self.assertEqual(cover.size, (80, 80))
 
+    def test_same_album_cover_is_downloaded_once_for_multiple_tracks(self):
+        cache = {}
+        first, second = ID3(), ID3()
+        with patch("artwork.requests.get", return_value=response_for(image_bytes())) as get:
+            self.assertTrue(embed_cover(first, TRACK, Mock(), cache=cache))
+            self.assertTrue(embed_cover(second, TRACK, Mock(), cache=cache))
+        get.assert_called_once()
+        self.assertEqual(first.getall("APIC")[0].data, second.getall("APIC")[0].data)
+
+    def test_failed_cover_is_retried_instead_of_cached(self):
+        cache = {}
+        with patch("artwork.requests.get", side_effect=[requests.Timeout(),
+                   response_for(image_bytes())]) as get:
+            self.assertFalse(embed_cover(ID3(), TRACK, Mock(), cache=cache))
+            self.assertTrue(embed_cover(ID3(), TRACK, Mock(), cache=cache))
+        self.assertEqual(get.call_count, 2)
+
+    def test_cover_cache_is_bounded_and_different_urls_stay_separate(self):
+        cache = {}
+        with patch("artwork.MAX_CACHED_COVERS", 2), patch(
+                "artwork.fetch_cover", side_effect=[b"first", b"second", b"third"]):
+            for index in range(3):
+                track = {"album": {"images": [{"url": str(index)}]}}
+                tags = ID3()
+                self.assertTrue(embed_cover(tags, track, Mock(), cache=cache))
+        self.assertEqual(cache, {"1": b"second", "2": b"third"})
+
 
 class MP3Tests(unittest.TestCase):
     @classmethod

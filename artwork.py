@@ -14,6 +14,7 @@ from mutagen.id3 import APIC
 COVER_SIZE = (600, 600)
 MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024
 MAX_IMAGE_PIXELS = 20_000_000
+MAX_CACHED_COVERS = 64
 
 
 def prepare_cover(data):
@@ -46,7 +47,7 @@ def fetch_cover(url):
         return prepare_cover(bytes(result))
 
 
-def embed_cover(tags, track, log):
+def embed_cover(tags, track, log, cache=None):
     """Prefer this Spotify release's art, then an existing embedded picture.
 
     Return False if no usable cover exists. Failed downloads never erase old art.
@@ -61,7 +62,14 @@ def embed_cover(tags, track, log):
             continue
         seen.add(url)
         try:
-            cover_data = fetch_cover(url)
+            if cache is not None and url in cache:
+                cover_data = cache[url]
+            else:
+                cover_data = fetch_cover(url)
+                if cache is not None:
+                    if len(cache) >= MAX_CACHED_COVERS:
+                        del cache[next(iter(cache))]
+                    cache[url] = cover_data
             break
         except (requests.RequestException, OSError, ValueError,
                 Image.DecompressionBombError, Image.DecompressionBombWarning) as error:

@@ -29,6 +29,7 @@ class DownloaderThread(threading.Thread):
         self.download_path = download_path
         self.quality = quality
         self.cancel_event = cancel_event
+        self.cover_cache = {}
         self.daemon = True
 
     def run(self):
@@ -73,6 +74,20 @@ class DownloaderThread(threading.Thread):
 
     def clean_filename(self, filename):
         return "".join([c for c in filename if c.isalnum() or c in (' ', '-')]).rstrip()
+
+    def download_options(self, mp3_filepath, ffmpeg_path):
+        return {
+            # Prefer an audio-only stream; use a combined stream only if needed.
+            'format': 'bestaudio/best',
+            'concurrent_fragment_downloads': 4,
+            'postprocessors': [{'key': 'FFmpegExtractAudio',
+                                'preferredcodec': 'mp3',
+                                'preferredquality': self.quality}],
+            'outtmpl': os.path.splitext(mp3_filepath)[0],
+            'default_search': 'ytsearch1:',
+            'quiet': True, 'noprogress': True, 'ffmpeg_location': ffmpeg_path,
+            'cookiefile': 'youtube-cookies.txt',
+        }
 
     # --- ТВОЯТА РАБОТЕЩА ФУНКЦИЯ ---
     def find_best_spotify_match(self, video_info, sp):
@@ -158,12 +173,7 @@ class DownloaderThread(threading.Thread):
 
                 self.log(f"{get_string('downloading_song', self.lang)} {log_name}")
                 
-                download_ydl_opts = {
-                    'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': self.quality}],
-                    'outtmpl': final_filepath.replace('.mp3', ''),
-                    'quiet': True, 'noprogress': True, 'ffmpeg_location': ffmpeg_path,
-                    'cookiefile': 'youtube-cookies.txt'
-                }
+                download_ydl_opts = self.download_options(final_filepath, ffmpeg_path)
                 try:
                     with yt_dlp.YoutubeDL(download_ydl_opts) as download_ydl:
                         download_ydl.download([video_url])
@@ -207,12 +217,7 @@ class DownloaderThread(threading.Thread):
 
             try:
                 search_query = f"ytsearch1:{artist} - {name} audio"
-                ydl_opts = {
-                    'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': self.quality}],
-                    'outtmpl': mp3_filepath.replace('.mp3', ''), 'default_search': 'ytsearch1:',
-                    'quiet': True, 'noprogress': True, 'ffmpeg_location': ffmpeg_path,
-                    'cookiefile': 'youtube-cookies.txt'
-                }
+                ydl_opts = self.download_options(mp3_filepath, ffmpeg_path)
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([search_query])
 
@@ -254,12 +259,7 @@ class DownloaderThread(threading.Thread):
             try:
                 self.log(f"{get_string('downloading_song', self.lang)} {log_name}")
                 search_query = f"{track['artists'][0]['name']} - {track['name']} audio"
-                ydl_opts = {
-                    'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': self.quality}],
-                    'outtmpl': mp3_filepath.replace('.mp3', ''), 'default_search': 'ytsearch1:',
-                    'quiet': True, 'noprogress': True, 'ffmpeg_location': ffmpeg_path,
-                    'cookiefile': 'youtube-cookies.txt'
-                }
+                ydl_opts = self.download_options(mp3_filepath, ffmpeg_path)
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([search_query])
                 self.add_downloaded_metadata(mp3_filepath, track, genius)
@@ -298,10 +298,10 @@ class DownloaderThread(threading.Thread):
             audio.tags.add(TPOS(encoding=1, text=str(track['disc_number'])))
         if track['album'].get('release_date'):
             audio.tags.add(TDRC(encoding=1, text=track['album']['release_date']))
-        has_cover = embed_cover(audio.tags, track, self.log)
+        has_cover = embed_cover(audio.tags, track, self.log, cache=self.cover_cache)
         if genius:
             try:
-                song = genius.search_song(original_track_name, artist_name)
+                song = genius.search_song(original_track_name, artist_name, get_full_info=False)
                 if song and song.lyrics:
                     cleaned_lyrics = song.lyrics.strip()
                     if cleaned_lyrics:

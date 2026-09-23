@@ -21,6 +21,7 @@ Artwork is embedded directly into each MP3 file, so there is no need to keep sep
 - Updates existing MP3s when you run the same Spotify playlist again in the same download folder.
 - Optional lyrics from Genius and a selectable download folder.
 - Automatic installation of a local Python runtime, dependencies, and FFmpeg.
+- Prefers audio-only streams, downloads up to four stream fragments concurrently, and reuses recently fetched album covers within a run. Speed gains depend on the source and connection; the selected MP3 bitrate is unchanged.
 
 ### Getting started
 
@@ -67,6 +68,7 @@ SpotiDown — программа для Windows, которая позволяе
 - Обновление обложек ранее скачанных MP3 при повторном запуске того же Spotify-плейлиста.
 - Необязательные тексты песен из Genius и выбор папки сохранения.
 - Автоматическая установка Python, библиотек и FFmpeg в папку программы.
+- Приоритет аудиопотока без видео, загрузка до четырёх фрагментов потока одновременно и повторное использование недавно загруженных обложек в пределах одного запуска. Выбранный битрейт MP3 сохраняется; ускорение зависит от источника и соединения.
 
 ### Запуск
 
