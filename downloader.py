@@ -46,7 +46,15 @@ class DownloaderThread(threading.Thread):
                 sp = spotipy.Spotify(auth_manager=auth_manager)
             if self.keys.get('genius_token'):
                 self.log(get_string('connecting_genius', self.lang))
-                genius = lyricsgenius.Genius(self.keys['genius_token'], verbose=False, remove_section_headers=True, timeout=15)
+                try:
+                    genius = lyricsgenius.Genius(
+                        self.keys['genius_token'], remove_section_headers=True, timeout=15)
+                    # Older releases use this attribute; newer ones are silent by default.
+                    if hasattr(genius, 'verbose'):
+                        genius.verbose = False
+                except Exception as genius_error:
+                    genius = None
+                    self.log(f"WARNING: Lyrics disabled ({type(genius_error).__name__}). Continuing with audio and artwork.")
             
             if self.download_type == 'spotify' and sp:
                 self.process_spotify_download(ffmpeg_path, sp, genius)
