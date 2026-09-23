@@ -1,0 +1,8 @@
+spotipy
+yt-dlp
+mutagen
+requests
+lyricsgenius
+thefuzz
+beautifulsoup4
+Pillow>=9.1

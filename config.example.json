@@ -1,0 +1,10 @@
+{
+    "api_keys": {
+        "spotify_id": "",
+        "spotify_secret": "",
+        "genius_token": ""
+    },
+    "download_path": "downloads",
+    "quality": "192",
+    "source_type": "Spotify"
+}

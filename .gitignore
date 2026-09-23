@@ -1,0 +1,20 @@
+.runtime/
+.venv/
+__pycache__/
+*.py[cod]
+startup-error.log
+
+# Personal settings, access tokens and login cookies
+config.json
+.cache
+.cache-*
+*cookies*.txt
+.env
+.env.*
+
+# Downloaded binaries and music
+ffmpeg/
+downloads/
+*.mp3
+*.part
+*.ytdl
