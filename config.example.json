@@ -6,5 +6,7 @@
     },
     "download_path": "downloads",
     "quality": "192",
-    "source_type": "Spotify"
+    "source_type": "Spotify",
+    "language": "ru",
+    "lyrics_enabled": false
 }

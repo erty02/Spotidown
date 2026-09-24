@@ -193,10 +193,9 @@ class MP3Tests(unittest.TestCase):
         self.file.unlink()
         spotify = Mock()
         spotify.playlist_items.return_value = {"items": [{"track": TRACK}], "next": None}
-        with patch("downloader.yt_dlp.YoutubeDL") as youtube, patch(
+        with patch.object(self.worker, 'select_audio', return_value='https://example.test/audio'), patch.object(
+                self.worker, 'download_audio', side_effect=lambda *args: shutil.copyfile(self.source, self.file)), patch(
                 "artwork.requests.get", return_value=response_for(image_bytes())):
-            youtube.return_value.__enter__.return_value.download.side_effect = (
-                lambda urls: shutil.copyfile(self.source, self.file))
             self.worker.process_spotify_download(str(self.ffmpeg.parent), spotify, None)
         self.assertEqual(len(ID3(self.file).getall("APIC")), 1)
         self.assertEqual(ID3(self.file).version, (2, 3, 0))
@@ -214,10 +213,9 @@ class MP3Tests(unittest.TestCase):
         self.file.unlink()
         spotify = Mock()
         spotify.playlist_items.return_value = {"items": [{"track": TRACK}], "next": None}
-        with patch("downloader.yt_dlp.YoutubeDL") as youtube, patch.object(
+        with patch.object(self.worker, 'select_audio', return_value='https://example.test/audio'), patch.object(
+                self.worker, 'download_audio', side_effect=lambda *args: shutil.copyfile(self.source, self.file)), patch.object(
                 self.worker, "add_metadata", side_effect=OSError("cannot write tags")):
-            youtube.return_value.__enter__.return_value.download.side_effect = (
-                lambda urls: shutil.copyfile(self.source, self.file))
             self.worker.process_spotify_download(str(self.ffmpeg.parent), spotify, None)
         self.assertEqual(self.file.read_bytes(), self.source.read_bytes())
         self.assertTrue(any("Audio kept" in message for message in self.logs))
@@ -230,6 +228,34 @@ class MP3Tests(unittest.TestCase):
         self.assertEqual(self.pcm(), audio_before)
         self.assertEqual(ID3(self.file).getall("APIC"), [])
         self.assertTrue(any("No usable cover" in message for message in self.logs))
+
+    def test_download_publishes_readable_mp3_only_after_success(self):
+        destination = self.folder / 'staged-result.mp3'
+        self.addCleanup(lambda: destination.unlink(missing_ok=True))
+        with patch('downloader.yt_dlp.YoutubeDL') as factory:
+            def download(urls):
+                target = factory.call_args.args[0]['outtmpl'].replace('%(ext)s', 'mp3')
+                shutil.copyfile(self.source, target)
+                return 0
+            factory.return_value.__enter__.return_value.download.side_effect = download
+            self.worker.download_audio('https://example.test/audio', str(destination), str(self.ffmpeg.parent))
+        self.assertEqual(destination.read_bytes(), self.source.read_bytes())
+        self.assertEqual(list(self.folder.glob('.spotidown-download-*')), [])
+
+    def test_cancellation_after_transfer_preserves_previous_file(self):
+        original = self.file.read_bytes()
+        with patch('downloader.yt_dlp.YoutubeDL') as factory:
+            def download(urls):
+                target = factory.call_args.args[0]['outtmpl'].replace('%(ext)s', 'mp3')
+                shutil.copyfile(self.source, target)
+                self.worker.cancel_event.set()
+                return 0
+            factory.return_value.__enter__.return_value.download.side_effect = download
+            from downloader import Cancelled
+            with self.assertRaises(Cancelled):
+                self.worker.download_audio('https://example.test/audio', str(self.file), str(self.ffmpeg.parent))
+        self.assertEqual(self.file.read_bytes(), original)
+        self.assertEqual(list(self.folder.glob('.spotidown-download-*')), [])
 
 
 if __name__ == "__main__":

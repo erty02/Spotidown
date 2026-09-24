@@ -15,6 +15,10 @@ Artwork is embedded directly into each MP3 file, so there is no need to keep sep
 ### Features
 
 - Spotify track and playlist links, plus the original YouTube, Apple Music, and Deezer source modes.
+- A redesigned window with Russian and English, a saved language preference, and optional lyrics disabled by default for faster downloads.
+- Live download percentage, speed and remaining time when available, separate conversion/artwork stages, and overall playlist progress.
+- A final report containing every recorded error and warning, grouped by track and stage, with a Save report button. Processing continues after individual track failures.
+- Conservative audio matching: checks up to eight search results against the artist, title, release version and duration; prefers artist Topic / auto-generated audio and artist official-audio uploads. Edits, sped-up/slowed versions, covers and music videos are rejected unless the requested track itself has that version. Uncertain tracks are reported instead of using the first result.
 - MP3 output at selectable bitrates: 128, 192, 256, or 320 kbps.
 - Automatic Spotify artwork: baseline RGB JPEG, up to 600 × 600 pixels, embedded as a single front cover.
 - ID3v2.3 tags with UTF-16 text, including track, artist, album, album artist, and track/disc numbers when available.
@@ -27,8 +31,8 @@ Artwork is embedded directly into each MP3 file, so there is no need to keep sep
 
 1. Download this repository using **Code → Download ZIP** and extract it to a permanent folder.
 2. Double-click **`start.bat`**. The first launch requires an internet connection and 64-bit Windows. Python and dependencies are installed in `.runtime`; no manual Python installation or PATH changes are needed.
-3. Enter your Spotify **Client ID** and **Client Secret** in the app. The Genius token is optional.
-4. Select **Spotify**, paste a track or playlist URL, choose your download folder, and click **Start Download**.
+3. Open **API settings / Настройки API** and enter your Spotify **Client ID** and **Client Secret**. The Genius token is optional.
+4. Select **Spotify**, paste a track or playlist URL, choose your download folder, and click **Download music / Скачать музыку**.
 5. Import the resulting MP3 files into iTunes and sync your iPod yourself.
 
 If YouTube requires sign-in verification, provide your own Netscape-format cookies file named `youtube-cookies.txt` in the application folder. Keep this file and `config.json` private; both are excluded from Git.
@@ -37,7 +41,9 @@ To repair artwork in old downloads, use the same Spotify playlist and folder. Fi
 
 ### Notes
 
-- Audio is found on YouTube; Spotify provides metadata and artwork. A search result may be a different version of the song.
+- Audio is found on YouTube; Spotify provides metadata and artwork. Matching is based on source metadata, not acoustic fingerprints. It reduces incorrect edits but cannot guarantee an unaltered recording or detect every added sound. Strict checks may skip a legitimate recording; the report explains why. Duration must differ by no more than 1.5% (minimum 2.5 seconds, maximum 5 seconds).
+- Existing MP3s are retagged, not verified or replaced. To replace a previously downloaded edit, move that MP3 out of the download folder or use a new folder before running the playlist again.
+- Direct YouTube mode downloads exactly the chosen video without edit filtering. Spotify metadata/artwork is added only when a conservative match is available. Apple Music/Deezer need a reference duration, usually resolved through Spotify; missing reference data is reported rather than guessed.
 - Artwork comes from the track's album or single release, not the playlist image. If an image fails, other images for that release and an existing embedded cover are tried. Missing artwork produces a warning and does not delete the audio.
 - iPod synchronization is not automated. The selected tag and image formats are intended for compatibility; physical iPod verification has not been performed.
 - Spotify API access and YouTube downloads depend on the availability and access rules of those services.
@@ -51,7 +57,7 @@ After the first setup, run from the project folder:
 .\.runtime\python\python.exe -m unittest discover -s tests -v
 ```
 
-The tests generate a short synthetic MP3 with FFmpeg and check embedded artwork, ID3 tags, repeat processing, failure handling, and unchanged decoded audio. Spotify and YouTube requests are mocked.
+Tests cover matching and rejection of edits, error aggregation, cancellation, download hooks, Russian translations, and Tk UI event delivery and layout. They also generate a short synthetic MP3 with FFmpeg to check artwork, ID3 tags, repeat processing, failure handling, and unchanged decoded audio. Spotify and YouTube requests are mocked; this is not an end-to-end service availability test. Tk checks require a desktop session.
 
 ## Русский
 
@@ -62,6 +68,10 @@ SpotiDown — программа для Windows, которая позволяе
 ### Возможности
 
 - Отдельные треки и плейлисты Spotify, а также исходные режимы YouTube, Apple Music и Deezer.
+- Обновлённое окно с русским и английским языками; выбор языка сохраняется. Тексты песен можно включить отдельно.
+- Прогресс текущей песни и всего плейлиста, скорость и оставшееся время, если они доступны. Видны этапы поиска, преобразования и добавления обложки.
+- Все зарегистрированные ошибки и предупреждения в итоговом отчёте: название песни, этап и причина. Отчёт можно сохранить в текстовый файл; ошибка одного трека не останавливает остальные.
+- Проверка до восьми кандидатов по исполнителю, названию, версии и длительности. Приоритет аудио с каналов исполнителей: Topic, автоматически опубликованные записи и Official Audio. Эдиты, ускоренные/замедленные версии, каверы и клипы отсеиваются; если надёжного совпадения нет, трек не скачивается. Официальный ремикс из плейлиста ищется именно в этой версии.
 - Выбор битрейта MP3: 128, 192, 256 или 320 кбит/с.
 - Автоматическое встраивание обложки альбома или сингла: обычный RGB JPEG до 600 × 600 пикселей.
 - Теги ID3v2.3 с названиями, исполнителями, альбомом и номерами трека и диска, если они доступны.
@@ -75,10 +85,14 @@ SpotiDown — программа для Windows, которая позволяе
 1. Скачай репозиторий через **Code → Download ZIP** и распакуй в постоянную папку.
 2. Дважды нажми **`start.bat`**. Для первой настройки нужны интернет и 64-битная Windows. Вручную устанавливать Python не требуется.
 3. Введи Spotify **Client ID** и **Client Secret** в настройках. Токен Genius для обложек не нужен.
-4. Выбери **Spotify**, вставь ссылку на трек или плейлист, укажи папку и нажми **Start Download**.
+4. Выбери **Spotify**, вставь ссылку на трек или плейлист, укажи папку и нажми **Download music / Скачать музыку**.
 5. Добавь готовые MP3 в iTunes и самостоятельно выполни синхронизацию с iPod.
 
 Если YouTube требует подтверждения входа, помести собственный файл cookies в формате Netscape под именем `youtube-cookies.txt` в папку программы. Файлы cookies и `config.json` содержат личные данные и исключены из Git.
+
+Подбор использует метаданные, а не звуковой отпечаток: он снижает вероятность эдитов, но не гарантирует отсутствие любых посторонних звуков. Допустимое расхождение длительности — 1,5%, не меньше 2,5 и не больше 5 секунд. Строгая проверка может пропустить и правильную запись; причина будет в отчёте. В режиме прямой ссылки YouTube скачивается выбранное видео без отсева эдитов. Для Apple Music/Deezer нужна эталонная длительность, обычно получаемая через Spotify.
+
+**Старые ошибочные записи автоматически не заменяются.** Чтобы заново скачать оригинал, убери старый MP3 из выбранной папки или выбери новую папку.
 
 Для обновления старых файлов повторно запусти тот же плейлист с той же папкой. Песни с прежними именами будут обработаны без повторного скачивания аудио. При недоступной обложке программа сохранит звук и покажет предупреждение. Проверка на физическом iPod не выполнялась.
 
